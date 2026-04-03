@@ -1193,13 +1193,17 @@ const BOURBON_CATALOGUE = [
 // ── AUTOCOMPLETE ──────────────────────────────────────────────────────────────
 let acSelectedIdx = -1;
 
+function normalizeStr(s) {
+  return s.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+}
+
 function onNameInput(val) {
   const list = document.getElementById('acList');
   if (!val || val.length < 2) { list.classList.remove('open'); return; }
 
-  const q = val.toLowerCase();
+  const q = normalizeStr(val);
   const matches = BOURBON_CATALOGUE.filter(b =>
-    b.name.toLowerCase().includes(q)
+    normalizeStr(b.name).includes(q)
   ).slice(0, 12);
 
   if (!matches.length) { list.classList.remove('open'); return; }
