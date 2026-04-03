@@ -267,6 +267,24 @@
   .scan-status.success { color: var(--full); }
   .scan-status.error   { color: var(--danger); }
 
+  /* ── AUTOCOMPLETE ── */
+  .autocomplete-wrap { position: relative; }
+  .autocomplete-list {
+    position: absolute; top: 100%; left: 0; right: 0;
+    background: var(--surface2); border: 1px solid var(--amber);
+    border-top: none; z-index: 500; max-height: 220px; overflow-y: auto;
+    display: none;
+  }
+  .autocomplete-list.open { display: block; }
+  .autocomplete-item {
+    padding: 9px 12px; cursor: pointer; border-bottom: 1px solid var(--border);
+    font-size: 12px; color: var(--cream);
+  }
+  .autocomplete-item:last-child { border-bottom: none; }
+  .autocomplete-item:hover, .autocomplete-item.selected { background: rgba(200,131,42,0.15); }
+  .autocomplete-item .ac-name { font-family: var(--font-display); font-size: 13px; }
+  .autocomplete-item .ac-meta { font-size: 10px; color: var(--muted); margin-top: 2px; letter-spacing: 0.04em; }
+
   /* Barcode scanner overlay */
   #scanOverlay {
     display: none; position: fixed; inset: 0;
@@ -404,7 +422,15 @@
       <div class="form-row">
         <div class="field">
           <label>Bottle Name *</label>
-          <input type="text" id="f-name" placeholder="e.g. Eagle Rare 10">
+          <div class="autocomplete-wrap">
+            <input type="text" id="f-name" placeholder="Type to search catalogue…"
+              autocomplete="off"
+              oninput="onNameInput(this.value)"
+              onkeydown="onNameKeydown(event)"
+              onfocus="onNameInput(this.value)"
+              onblur="setTimeout(closeAutocomplete,200)">
+            <div class="autocomplete-list" id="acList"></div>
+          </div>
         </div>
         <div class="field">
           <label>Distillery</label>
@@ -1256,6 +1282,248 @@ async function handlePhoto(event) {
     setScanStatus('Photo label requires Claude login — use barcode or fill manually', 'error');
     event.target.value = '';
   }
+}
+
+// ── BOURBON CATALOGUE ─────────────────────────────────────────────────────────
+const BOURBON_CATALOGUE = [
+  // BUFFALO TRACE DISTILLERY
+  {name:"Buffalo Trace",distillery:"Buffalo Trace",age:"NAS",proof:"90",mashbill:"Mash #1"},
+  {name:"Eagle Rare 10 Year",distillery:"Buffalo Trace",age:"10 Year",proof:"90",mashbill:"Mash #1"},
+  {name:"Eagle Rare 17 Year",distillery:"Buffalo Trace",age:"17 Year",proof:"101",mashbill:"Mash #1"},
+  {name:"Blanton's Original",distillery:"Buffalo Trace",age:"NAS",proof:"93",mashbill:"Mash #2"},
+  {name:"Blanton's Straight from the Barrel",distillery:"Buffalo Trace",age:"NAS",proof:"130",mashbill:"Mash #2"},
+  {name:"Blanton's Special Reserve",distillery:"Buffalo Trace",age:"NAS",proof:"80",mashbill:"Mash #2"},
+  {name:"Blanton's Gold",distillery:"Buffalo Trace",age:"NAS",proof:"103",mashbill:"Mash #2"},
+  {name:"E.H. Taylor Small Batch",distillery:"Buffalo Trace",age:"NAS",proof:"100",mashbill:"Standard"},
+  {name:"E.H. Taylor Single Barrel",distillery:"Buffalo Trace",age:"NAS",proof:"100",mashbill:"Standard"},
+  {name:"E.H. Taylor Barrel Proof",distillery:"Buffalo Trace",age:"NAS",proof:"125+",mashbill:"Standard"},
+  {name:"E.H. Taylor Straight Rye",distillery:"Buffalo Trace",age:"NAS",proof:"100",mashbill:"Rye"},
+  {name:"E.H. Taylor Four Grain",distillery:"Buffalo Trace",age:"NAS",proof:"100",mashbill:"Four Grain"},
+  {name:"W.L. Weller Special Reserve",distillery:"Buffalo Trace",age:"NAS",proof:"90",mashbill:"Wheated"},
+  {name:"W.L. Weller Antique 107",distillery:"Buffalo Trace",age:"NAS",proof:"107",mashbill:"Wheated"},
+  {name:"W.L. Weller 12 Year",distillery:"Buffalo Trace",age:"12 Year",proof:"90",mashbill:"Wheated"},
+  {name:"W.L. Weller Full Proof",distillery:"Buffalo Trace",age:"NAS",proof:"114",mashbill:"Wheated"},
+  {name:"W.L. Weller C.Y.P.B.",distillery:"Buffalo Trace",age:"NAS",proof:"95",mashbill:"Wheated"},
+  {name:"Pappy Van Winkle 10 Year",distillery:"Buffalo Trace",age:"10 Year",proof:"107",mashbill:"Wheated"},
+  {name:"Pappy Van Winkle 12 Year",distillery:"Buffalo Trace",age:"12 Year",proof:"90",mashbill:"Wheated"},
+  {name:"Pappy Van Winkle 15 Year",distillery:"Buffalo Trace",age:"15 Year",proof:"107",mashbill:"Wheated"},
+  {name:"Pappy Van Winkle 20 Year",distillery:"Buffalo Trace",age:"20 Year",proof:"90.4",mashbill:"Wheated"},
+  {name:"Pappy Van Winkle 23 Year",distillery:"Buffalo Trace",age:"23 Year",proof:"95.6",mashbill:"Wheated"},
+  {name:"Van Winkle Special Reserve 12 Year",distillery:"Buffalo Trace",age:"12 Year",proof:"90.4",mashbill:"Wheated"},
+  {name:"George T. Stagg",distillery:"Buffalo Trace",age:"NAS",proof:"130+",mashbill:"Mash #1"},
+  {name:"Stagg Jr.",distillery:"Buffalo Trace",age:"NAS",proof:"130+",mashbill:"Mash #1"},
+  {name:"Elmer T. Lee",distillery:"Buffalo Trace",age:"NAS",proof:"90",mashbill:"Mash #2"},
+  {name:"Rock Hill Farms",distillery:"Buffalo Trace",age:"NAS",proof:"100",mashbill:"Mash #2"},
+  {name:"Hancock's President's Reserve",distillery:"Buffalo Trace",age:"NAS",proof:"88.9",mashbill:"Mash #2"},
+  {name:"Ancient Age",distillery:"Buffalo Trace",age:"NAS",proof:"80",mashbill:"Mash #1"},
+  {name:"Ancient Ancient Age 10 Year",distillery:"Buffalo Trace",age:"10 Year",proof:"86",mashbill:"Mash #1"},
+  {name:"Benchmark Old No. 8",distillery:"Buffalo Trace",age:"NAS",proof:"80",mashbill:"Mash #1"},
+  {name:"Kentucky Tavern",distillery:"Buffalo Trace",age:"NAS",proof:"80",mashbill:"Mash #1"},
+
+  // JIM BEAM / BEAM SUNTORY
+  {name:"Jim Beam White Label",distillery:"Jim Beam",age:"4 Year",proof:"80",mashbill:"Standard"},
+  {name:"Jim Beam Black",distillery:"Jim Beam",age:"8 Year",proof:"86",mashbill:"Standard"},
+  {name:"Jim Beam Double Oak",distillery:"Jim Beam",age:"NAS",proof:"86",mashbill:"Standard"},
+  {name:"Jim Beam Bonded",distillery:"Jim Beam",age:"4 Year",proof:"100",mashbill:"Standard"},
+  {name:"Jim Beam Single Barrel",distillery:"Jim Beam",age:"NAS",proof:"95",mashbill:"Standard"},
+  {name:"Basil Hayden's",distillery:"Jim Beam",age:"8 Year",proof:"80",mashbill:"High Rye"},
+  {name:"Basil Hayden 10 Year",distillery:"Jim Beam",age:"10 Year",proof:"80",mashbill:"High Rye"},
+  {name:"Basil Hayden Dark Rye",distillery:"Jim Beam",age:"NAS",proof:"80",mashbill:"Rye"},
+  {name:"Knob Creek 9 Year",distillery:"Jim Beam",age:"9 Year",proof:"100",mashbill:"Standard"},
+  {name:"Knob Creek 12 Year",distillery:"Jim Beam",age:"12 Year",proof:"100",mashbill:"Standard"},
+  {name:"Knob Creek Single Barrel",distillery:"Jim Beam",age:"NAS",proof:"120",mashbill:"Standard"},
+  {name:"Knob Creek Smoked Maple",distillery:"Jim Beam",age:"NAS",proof:"90",mashbill:"Standard"},
+  {name:"Knob Creek Rye",distillery:"Jim Beam",age:"NAS",proof:"100",mashbill:"Rye"},
+  {name:"Baker's 7 Year",distillery:"Jim Beam",age:"7 Year",proof:"107",mashbill:"Standard"},
+  {name:"Booker's",distillery:"Jim Beam",age:"6-8 Year",proof:"125+",mashbill:"Standard"},
+  {name:"Little Book",distillery:"Jim Beam",age:"NAS",proof:"120+",mashbill:"Blended"},
+  {name:"Old Overholt Rye",distillery:"Jim Beam",age:"NAS",proof:"80",mashbill:"Rye"},
+  {name:"Old Grand-Dad 80",distillery:"Jim Beam",age:"NAS",proof:"80",mashbill:"High Rye"},
+  {name:"Old Grand-Dad 100 Bonded",distillery:"Jim Beam",age:"NAS",proof:"100",mashbill:"High Rye"},
+  {name:"Old Grand-Dad 114",distillery:"Jim Beam",age:"NAS",proof:"114",mashbill:"High Rye"},
+
+  // HEAVEN HILL
+  {name:"Evan Williams Black Label",distillery:"Heaven Hill",age:"NAS",proof:"86",mashbill:"Standard"},
+  {name:"Evan Williams Single Barrel",distillery:"Heaven Hill",age:"NAS",proof:"86.6",mashbill:"Standard"},
+  {name:"Evan Williams White Label Bottled-in-Bond",distillery:"Heaven Hill",age:"NAS",proof:"100",mashbill:"Standard"},
+  {name:"Elijah Craig Small Batch",distillery:"Heaven Hill",age:"NAS",proof:"94",mashbill:"Standard"},
+  {name:"Elijah Craig Barrel Proof",distillery:"Heaven Hill",age:"12 Year",proof:"120+",mashbill:"Standard"},
+  {name:"Elijah Craig 18 Year",distillery:"Heaven Hill",age:"18 Year",proof:"90",mashbill:"Standard"},
+  {name:"Elijah Craig Toasted Barrel",distillery:"Heaven Hill",age:"NAS",proof:"94",mashbill:"Standard"},
+  {name:"Henry McKenna 10 Year Bottled-in-Bond",distillery:"Heaven Hill",age:"10 Year",proof:"100",mashbill:"Standard"},
+  {name:"Larceny Small Batch",distillery:"Heaven Hill",age:"NAS",proof:"92",mashbill:"Wheated"},
+  {name:"Larceny Barrel Proof",distillery:"Heaven Hill",age:"NAS",proof:"120+",mashbill:"Wheated"},
+  {name:"Rittenhouse Rye Bottled-in-Bond",distillery:"Heaven Hill",age:"NAS",proof:"100",mashbill:"Rye"},
+  {name:"Heaven Hill 7 Year Bottled-in-Bond",distillery:"Heaven Hill",age:"7 Year",proof:"100",mashbill:"Standard"},
+  {name:"Parker's Heritage Collection",distillery:"Heaven Hill",age:"NAS",proof:"120+",mashbill:"Standard"},
+  {name:"Fighting Cock",distillery:"Heaven Hill",age:"6 Year",proof:"103",mashbill:"Standard"},
+  {name:"J.T.S. Brown Bottled-in-Bond",distillery:"Heaven Hill",age:"NAS",proof:"100",mashbill:"Standard"},
+  {name:"Old Fitzgerald Bottled-in-Bond",distillery:"Heaven Hill",age:"NAS",proof:"100",mashbill:"Wheated"},
+
+  // MAKER'S MARK
+  {name:"Maker's Mark",distillery:"Maker's Mark",age:"NAS",proof:"90",mashbill:"Wheated"},
+  {name:"Maker's Mark Cask Strength",distillery:"Maker's Mark",age:"NAS",proof:"110+",mashbill:"Wheated"},
+  {name:"Maker's Mark 46",distillery:"Maker's Mark",age:"NAS",proof:"94",mashbill:"Wheated"},
+  {name:"Maker's Mark 46 Cask Strength",distillery:"Maker's Mark",age:"NAS",proof:"110+",mashbill:"Wheated"},
+  {name:"Maker's Mark Wood Finishing Series",distillery:"Maker's Mark",age:"NAS",proof:"108+",mashbill:"Wheated"},
+  {name:"Maker's Mark Private Select",distillery:"Maker's Mark",age:"NAS",proof:"108+",mashbill:"Wheated"},
+  {name:"Maker's Mark 101",distillery:"Maker's Mark",age:"NAS",proof:"101",mashbill:"Wheated"},
+
+  // WILD TURKEY
+  {name:"Wild Turkey 81",distillery:"Wild Turkey",age:"NAS",proof:"81",mashbill:"High Rye"},
+  {name:"Wild Turkey 101",distillery:"Wild Turkey",age:"NAS",proof:"101",mashbill:"High Rye"},
+  {name:"Wild Turkey Rare Breed",distillery:"Wild Turkey",age:"NAS",proof:"116.8",mashbill:"High Rye"},
+  {name:"Wild Turkey Rare Breed Rye",distillery:"Wild Turkey",age:"NAS",proof:"112.2",mashbill:"Rye"},
+  {name:"Wild Turkey Longbranch",distillery:"Wild Turkey",age:"NAS",proof:"82",mashbill:"High Rye"},
+  {name:"Wild Turkey Master's Keep",distillery:"Wild Turkey",age:"NAS",proof:"108+",mashbill:"High Rye"},
+  {name:"Wild Turkey Kentucky Spirit",distillery:"Wild Turkey",age:"NAS",proof:"101",mashbill:"High Rye"},
+  {name:"Russell's Reserve 10 Year",distillery:"Wild Turkey",age:"10 Year",proof:"90",mashbill:"High Rye"},
+  {name:"Russell's Reserve Single Barrel",distillery:"Wild Turkey",age:"NAS",proof:"110",mashbill:"High Rye"},
+  {name:"Russell's Reserve Single Rickhouse",distillery:"Wild Turkey",age:"NAS",proof:"104",mashbill:"High Rye"},
+  {name:"American Honey",distillery:"Wild Turkey",age:"NAS",proof:"71",mashbill:"Honey Liqueur"},
+
+  // BARTON 1792
+  {name:"1792 Small Batch",distillery:"Barton 1792",age:"NAS",proof:"93.7",mashbill:"High Rye"},
+  {name:"1792 Full Proof",distillery:"Barton 1792",age:"NAS",proof:"125",mashbill:"High Rye"},
+  {name:"1792 Single Barrel",distillery:"Barton 1792",age:"NAS",proof:"98.6",mashbill:"High Rye"},
+  {name:"1792 Bottled in Bond",distillery:"Barton 1792",age:"NAS",proof:"100",mashbill:"High Rye"},
+  {name:"1792 Sweet Wheat",distillery:"Barton 1792",age:"NAS",proof:"91.2",mashbill:"Wheated"},
+  {name:"1792 High Rye",distillery:"Barton 1792",age:"NAS",proof:"94.3",mashbill:"High Rye"},
+  {name:"1792 Port Finish",distillery:"Barton 1792",age:"NAS",proof:"88.9",mashbill:"High Rye"},
+  {name:"Very Old Barton Bottled-in-Bond",distillery:"Barton 1792",age:"NAS",proof:"100",mashbill:"Standard"},
+  {name:"Tom Moore",distillery:"Barton 1792",age:"NAS",proof:"80",mashbill:"Standard"},
+  {name:"Kentucky Gentleman",distillery:"Barton 1792",age:"NAS",proof:"80",mashbill:"Standard"},
+
+  // FOUR ROSES
+  {name:"Four Roses Yellow Label",distillery:"Four Roses",age:"NAS",proof:"80",mashbill:"Blended"},
+  {name:"Four Roses Small Batch",distillery:"Four Roses",age:"NAS",proof:"90",mashbill:"Blended"},
+  {name:"Four Roses Small Batch Select",distillery:"Four Roses",age:"NAS",proof:"104",mashbill:"Blended"},
+  {name:"Four Roses Single Barrel",distillery:"Four Roses",age:"NAS",proof:"100",mashbill:"OBSV"},
+  {name:"Four Roses Single Barrel Select",distillery:"Four Roses",age:"NAS",proof:"100+",mashbill:"Varies"},
+  {name:"Four Roses Limited Edition Small Batch",distillery:"Four Roses",age:"NAS",proof:"110+",mashbill:"Blended"},
+  {name:"Four Roses OESV",distillery:"Four Roses",age:"NAS",proof:"100",mashbill:"OESV"},
+  {name:"Four Roses OBSV",distillery:"Four Roses",age:"NAS",proof:"100",mashbill:"OBSV"},
+  {name:"Four Roses OBSK",distillery:"Four Roses",age:"NAS",proof:"100",mashbill:"OBSK"},
+  {name:"Four Roses OESK",distillery:"Four Roses",age:"NAS",proof:"100",mashbill:"OESK"},
+
+  // BROWN-FORMAN (Old Forester + Woodford Reserve)
+  {name:"Old Forester 86",distillery:"Old Forester",age:"NAS",proof:"86",mashbill:"Standard"},
+  {name:"Old Forester 100 Proof Bottled-in-Bond",distillery:"Old Forester",age:"NAS",proof:"100",mashbill:"Standard"},
+  {name:"Old Forester 1870",distillery:"Old Forester",age:"NAS",proof:"90",mashbill:"Standard"},
+  {name:"Old Forester 1897 Bottled in Bond",distillery:"Old Forester",age:"NAS",proof:"100",mashbill:"Standard"},
+  {name:"Old Forester 1910 Old Fine Whisky",distillery:"Old Forester",age:"NAS",proof:"93",mashbill:"Standard"},
+  {name:"Old Forester 1920 Prohibition Style",distillery:"Old Forester",age:"NAS",proof:"115",mashbill:"Standard"},
+  {name:"Old Forester Statesman",distillery:"Old Forester",age:"NAS",proof:"95",mashbill:"Standard"},
+  {name:"Old Forester Single Barrel",distillery:"Old Forester",age:"NAS",proof:"90",mashbill:"Standard"},
+  {name:"Old Forester Birthday Bourbon",distillery:"Old Forester",age:"NAS",proof:"96+",mashbill:"Standard"},
+  {name:"Woodford Reserve",distillery:"Woodford Reserve",age:"NAS",proof:"90.4",mashbill:"Triticale"},
+  {name:"Woodford Reserve Double Oaked",distillery:"Woodford Reserve",age:"NAS",proof:"90.4",mashbill:"Triticale"},
+  {name:"Woodford Reserve Batch Proof",distillery:"Woodford Reserve",age:"NAS",proof:"125+",mashbill:"Triticale"},
+  {name:"Woodford Reserve Master's Collection",distillery:"Woodford Reserve",age:"NAS",proof:"90+",mashbill:"Varies"},
+  {name:"Woodford Reserve Distillery Series",distillery:"Woodford Reserve",age:"NAS",proof:"90+",mashbill:"Varies"},
+  {name:"Woodford Reserve Rye",distillery:"Woodford Reserve",age:"NAS",proof:"90.4",mashbill:"Rye"},
+  {name:"Early Times",distillery:"Old Forester",age:"NAS",proof:"80",mashbill:"Standard"},
+
+  // BARDSTOWN BOURBON COMPANY
+  {name:"Bardstown Bourbon Origin Series",distillery:"Bardstown",age:"NAS",proof:"100",mashbill:"Kentucky Straight"},
+  {name:"Bardstown Bourbon Fusion Series",distillery:"Bardstown",age:"NAS",proof:"98+",mashbill:"Blended"},
+  {name:"Bardstown Bourbon Prisoner Wine Company",distillery:"Bardstown",age:"NAS",proof:"98",mashbill:"Blended"},
+  {name:"Bardstown Bourbon Discovery Series",distillery:"Bardstown",age:"NAS",proof:"100+",mashbill:"Blended"},
+  {name:"Bardstown Bourbon Collaborative Series",distillery:"Bardstown",age:"NAS",proof:"100+",mashbill:"Blended"},
+  {name:"Bardstown Bourbon Copper & Kings",distillery:"Bardstown",age:"NAS",proof:"100",mashbill:"Blended"},
+  {name:"Bardstown Bourbon Chateau de Laubade",distillery:"Bardstown",age:"NAS",proof:"98",mashbill:"Blended"},
+  {name:"Bardstown Bourbon Ferrand",distillery:"Bardstown",age:"NAS",proof:"98",mashbill:"Blended"},
+  {name:"Bardstown Bourbon Goodwood",distillery:"Bardstown",age:"NAS",proof:"98",mashbill:"Blended"},
+  {name:"Bardstown Bourbon West Virginia Great Barrel",distillery:"Bardstown",age:"NAS",proof:"100",mashbill:"Blended"},
+
+  // MGP OF INDIANA (common brands)
+  {name:"Bulleit Bourbon",distillery:"MGP Indiana",age:"NAS",proof:"90",mashbill:"High Rye"},
+  {name:"Bulleit Bourbon 10 Year",distillery:"MGP Indiana",age:"10 Year",proof:"91.2",mashbill:"High Rye"},
+  {name:"Bulleit Rye",distillery:"MGP Indiana",age:"NAS",proof:"90",mashbill:"Rye"},
+  {name:"George Remus Straight Bourbon",distillery:"MGP Indiana",age:"NAS",proof:"94",mashbill:"High Rye"},
+  {name:"George Remus Repeal Reserve",distillery:"MGP Indiana",age:"NAS",proof:"100+",mashbill:"High Rye"},
+  {name:"Redemption High Rye Bourbon",distillery:"MGP Indiana",age:"NAS",proof:"84",mashbill:"High Rye"},
+  {name:"Redemption Wheated Bourbon",distillery:"MGP Indiana",age:"NAS",proof:"96",mashbill:"Wheated"},
+  {name:"Redemption Rye",distillery:"MGP Indiana",age:"NAS",proof:"92",mashbill:"Rye"},
+  {name:"Rossville Union Master Crafted",distillery:"MGP Indiana",age:"NAS",proof:"90",mashbill:"Rye"},
+  {name:"Rossville Union Barrel Proof Straight Rye",distillery:"MGP Indiana",age:"NAS",proof:"114+",mashbill:"Rye"},
+  {name:"James E. Pepper 1776 Bourbon",distillery:"MGP Indiana",age:"NAS",proof:"100",mashbill:"High Rye"},
+  {name:"James E. Pepper 1776 Rye",distillery:"MGP Indiana",age:"NAS",proof:"100",mashbill:"Rye"},
+  {name:"Templeton Rye",distillery:"MGP Indiana",age:"NAS",proof:"80",mashbill:"Rye"},
+  {name:"Templeton Rye 6 Year",distillery:"MGP Indiana",age:"6 Year",proof:"90",mashbill:"Rye"},
+  {name:"High West American Prairie",distillery:"MGP Indiana",age:"NAS",proof:"92",mashbill:"Blended"},
+  {name:"High West Double Rye",distillery:"MGP Indiana",age:"NAS",proof:"92",mashbill:"Rye"},
+  {name:"Whistlepig 10 Year Rye",distillery:"MGP Indiana",age:"10 Year",proof:"100",mashbill:"Rye"},
+];
+
+// ── AUTOCOMPLETE ──────────────────────────────────────────────────────────────
+let acSelectedIdx = -1;
+
+function onNameInput(val) {
+  const list = document.getElementById('acList');
+  if (!val || val.length < 2) { list.classList.remove('open'); return; }
+
+  const q = val.toLowerCase();
+  const matches = BOURBON_CATALOGUE.filter(b =>
+    b.name.toLowerCase().includes(q)
+  ).slice(0, 12);
+
+  if (!matches.length) { list.classList.remove('open'); return; }
+
+  acSelectedIdx = -1;
+  list.innerHTML = matches.map((b, i) =>
+    `<div class="autocomplete-item" data-idx="${i}"
+       onmousedown="selectCatalogueItem(${i})"
+       onmouseover="acHover(${i})">
+      <div class="ac-name">${esc(b.name)}</div>
+      <div class="ac-meta">${esc(b.distillery)} · ${b.proof}° · ${esc(b.age)}</div>
+    </div>`
+  ).join('');
+  list._matches = matches;
+  list.classList.add('open');
+}
+
+function onNameKeydown(e) {
+  const list = document.getElementById('acList');
+  if (!list.classList.contains('open')) return;
+  const items = list.querySelectorAll('.autocomplete-item');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    acSelectedIdx = Math.min(acSelectedIdx + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('selected', i === acSelectedIdx));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    acSelectedIdx = Math.max(acSelectedIdx - 1, 0);
+    items.forEach((el, i) => el.classList.toggle('selected', i === acSelectedIdx));
+  } else if (e.key === 'Enter' && acSelectedIdx >= 0) {
+    e.preventDefault();
+    selectCatalogueItem(acSelectedIdx);
+  } else if (e.key === 'Escape') {
+    closeAutocomplete();
+  }
+}
+
+function acHover(idx) {
+  acSelectedIdx = idx;
+  document.querySelectorAll('#acList .autocomplete-item')
+    .forEach((el, i) => el.classList.toggle('selected', i === idx));
+}
+
+function selectCatalogueItem(idx) {
+  const list = document.getElementById('acList');
+  const item = list._matches[idx];
+  if (!item) return;
+  document.getElementById('f-name').value = item.name;
+  if (item.distillery) setDistVal(item.distillery);
+  if (item.age)        document.getElementById('f-age').value      = item.age;
+  if (item.proof)      document.getElementById('f-proof').value    = item.proof;
+  if (item.mashbill)   document.getElementById('f-mashbill').value = item.mashbill;
+  closeAutocomplete();
+  setScanStatus('Fields filled from catalogue — review and save', 'success');
+}
+
+function closeAutocomplete() {
+  document.getElementById('acList').classList.remove('open');
 }
 
 // ── SEED DATA ─────────────────────────────────────────────────────────────────
