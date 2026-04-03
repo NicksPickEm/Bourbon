@@ -1118,43 +1118,54 @@ function fillFormFromData(data) {
   if (data.distillery) setDistVal(data.distillery);
 }
 
-// ── BARCODE SCANNING ──────────────────────────────────────────────────────────
-let barcodeStream = null;
-let barcodeInterval = null;
+// ── BARCODE SCANNING (ZXing — works Safari iOS + Android Chrome) ──────────────
+let zxingControls = null;
+
+async function loadZXing() {
+  if (window.ZXingBrowser) return true;
+  return new Promise((resolve) => {
+    const s = document.createElement('script');
+    s.src = 'https://unpkg.com/@zxing/browser@latest';
+    s.onload = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.head.appendChild(s);
+  });
+}
 
 async function startBarcodeScan() {
-  // Use BarcodeDetector if available, otherwise fall back to photo
-  if (!('BarcodeDetector' in window)) {
-    setScanStatus('Barcode scanner not supported — use Photo Label instead', 'error');
+  setScanStatus('Loading scanner…', 'active');
+  const loaded = await loadZXing();
+  if (!loaded || !window.ZXingBrowser) {
+    setScanStatus('Scanner failed to load — try Photo Label', 'error');
     return;
   }
   try {
-    barcodeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
     const video = document.getElementById('scanVideo');
-    video.srcObject = barcodeStream;
     document.getElementById('scanOverlay').classList.add('open');
-    setScanStatus('Scanning…', 'active');
+    setScanStatus('Scanning — point at barcode', 'active');
 
-    const detector = new BarcodeDetector({ formats: ['upc_a','upc_e','ean_13','ean_8','code_128','code_39'] });
-    barcodeInterval = setInterval(async () => {
-      try {
-        const codes = await detector.detect(video);
-        if (codes.length > 0) {
-          const barcode = codes[0].rawValue;
-          stopBarcodeScan();
-          setScanStatus('Barcode found — looking up bottle…', 'active');
-          await lookupBarcode(barcode);
-        }
-      } catch(e) {}
-    }, 400);
+    const codeReader = new ZXingBrowser.BrowserMultiFormatReader();
+    const devices = await ZXingBrowser.BrowserCodeReader.listVideoInputDevices();
+    // Prefer back/rear camera on mobile
+    const deviceId = devices.find(d => /back|rear|environment/i.test(d.label))?.deviceId
+                  || devices[devices.length - 1]?.deviceId;
+
+    zxingControls = await codeReader.decodeFromVideoDevice(deviceId, video, async (result, err) => {
+      if (result) {
+        const barcode = result.getText();
+        stopBarcodeScan();
+        setScanStatus('Barcode found — looking up bottle…', 'active');
+        await lookupBarcode(barcode);
+      }
+    });
   } catch(e) {
+    stopBarcodeScan();
     setScanStatus('Camera access denied — use Photo Label instead', 'error');
   }
 }
 
 function stopBarcodeScan() {
-  clearInterval(barcodeInterval);
-  if (barcodeStream) { barcodeStream.getTracks().forEach(t => t.stop()); barcodeStream = null; }
+  if (zxingControls) { try { zxingControls.stop(); } catch(e){} zxingControls = null; }
   document.getElementById('scanOverlay').classList.remove('open');
 }
 
