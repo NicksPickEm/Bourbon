@@ -67,6 +67,14 @@
   }
   .btn-add:hover { background: var(--amber-lt); transform: translateY(-1px); }
 
+  .btn-io {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    padding: 8px 14px; font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
+    transition: all 0.15s; white-space: nowrap; align-self: center; margin-left: 8px; margin-bottom: 3px;
+  }
+  .btn-io:hover { border-color: var(--amber); color: var(--amber); }
+
   /* ── STATS ── */
   .stats-bar { display: flex; border-bottom: 1px solid var(--border); overflow-x: auto; }
   .stat { padding: 16px 28px; border-right: 1px solid var(--border); flex-shrink: 0; }
@@ -236,6 +244,55 @@
   .risk-detail.moderate .drink-by-big { color: var(--risk-mod); }
   .risk-detail.high     .drink-by-big { color: var(--risk-high); }
 
+  /* ── SCAN BUTTONS ── */
+  .scan-row {
+    display: flex; gap: 8px; margin-bottom: 4px;
+  }
+  .btn-scan {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--amber); padding: 10px 12px; font-family: var(--font-mono);
+    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    cursor: pointer; transition: all 0.15s; display: flex; align-items: center;
+    justify-content: center; gap: 7px;
+  }
+  .btn-scan:hover { border-color: var(--amber); background: rgba(200,131,42,0.08); }
+  .btn-scan svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+  .scan-status {
+    font-size: 11px; color: var(--muted); padding: 6px 0 2px;
+    min-height: 20px; text-align: center; letter-spacing: 0.04em;
+  }
+  .scan-status.active { color: var(--amber-lt); }
+  .scan-status.success { color: var(--full); }
+  .scan-status.error   { color: var(--danger); }
+
+  /* Barcode scanner overlay */
+  #scanOverlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.92); z-index: 200;
+    flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+  }
+  #scanOverlay.open { display: flex; }
+  #scanVideo { width: min(380px, 90vw); border: 2px solid var(--amber); }
+  .scan-frame {
+    position: relative; width: min(380px, 90vw);
+  }
+  .scan-line {
+    position: absolute; left: 0; right: 0; top: 50%;
+    height: 2px; background: var(--amber); opacity: 0.7;
+    animation: scanPulse 1.5s ease-in-out infinite;
+  }
+  @keyframes scanPulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
+  .scan-overlay-msg { color: var(--cream); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .btn-scan-cancel {
+    background: none; border: 1px solid var(--muted); color: var(--muted);
+    padding: 8px 24px; font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
+  }
+
+  /* Hidden file input for photo */
+  #photoInput { display: none; }
+
   ::-webkit-scrollbar { width:6px; height:6px; }
   ::-webkit-scrollbar-track { background:var(--bg); }
   ::-webkit-scrollbar-thumb { background:var(--border); }
@@ -264,9 +321,12 @@
       <button class="tab-btn active" id="tabCabinet" onclick="switchTab('cabinet')">Cabinet</button>
       <button class="tab-btn tab-finished" id="tabFinished" onclick="switchTab('finished')">Finished</button>
     </div>
+    <button class="btn-io" onclick="exportCabinet()" title="Export">↓ Export</button>
+    <button class="btn-io" onclick="document.getElementById('importInput').click()" title="Import">↑ Import</button>
     <button class="btn-add" onclick="openAddModal()">+ Add Bottle</button>
   </div>
 </header>
+<input type="file" id="importInput" accept=".json" style="display:none" onchange="importCabinet(event)">
 
 <div class="stats-bar" id="statsBar"></div>
 
@@ -296,6 +356,29 @@
       <button class="modal-close" onclick="closeFormModal()">✕</button>
     </div>
     <div class="modal-body">
+
+      <!-- SCAN ROW -->
+      <div id="scanSection">
+        <div class="scan-row">
+          <button class="btn-scan" onclick="startBarcodeScan()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 9V5a2 2 0 012-2h4M3 15v4a2 2 0 002 2h4M21 9V5a2 2 0 00-2-2h-4M21 15v4a2 2 0 01-2 2h-4"/>
+              <line x1="7" y1="12" x2="7" y2="12.01"/><line x1="12" y1="12" x2="12" y2="12.01"/><line x1="17" y1="12" x2="17" y2="12.01"/>
+              <line x1="7" y1="8" x2="7" y2="16"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="17" y1="8" x2="17" y2="16"/>
+            </svg>
+            Scan Barcode
+          </button>
+          <button class="btn-scan" onclick="triggerPhoto()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            Photo Label
+          </button>
+        </div>
+        <div class="scan-status" id="scanStatus">Scan barcode or photograph the label to auto-fill</div>
+      </div>
+
       <div class="form-row">
         <div class="field">
           <label>Bottle Name *</label>
@@ -394,6 +477,19 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- HIDDEN PHOTO INPUT -->
+<input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handlePhoto(event)">
+
+<!-- BARCODE SCANNER OVERLAY -->
+<div id="scanOverlay">
+  <div class="scan-frame">
+    <video id="scanVideo" autoplay playsinline muted></video>
+    <div class="scan-line"></div>
+  </div>
+  <div class="scan-overlay-msg">Point camera at barcode</div>
+  <button class="btn-scan-cancel" onclick="stopBarcodeScan()">Cancel</button>
 </div>
 
 <!-- DETAIL MODAL -->
@@ -740,6 +836,8 @@ function openAddModal() {
   editingId = null;
   document.getElementById('formTitle').innerHTML = 'Add a <span>New Bottle</span>';
   document.getElementById('btnDelete').style.display = 'none';
+  document.getElementById('scanSection').style.display = '';
+  setScanStatus('Scan barcode or photograph the label to auto-fill');
   clearForm();
   document.getElementById('formBackdrop').classList.add('open');
 }
@@ -748,6 +846,7 @@ function openEditModal(id) {
   editingId = id;
   const b = bottles.find(x => x.id === id); if (!b) return;
   document.getElementById('formTitle').innerHTML = `Edit <span>${esc(b.name)}</span>`;
+  document.getElementById('scanSection').style.display = 'none';
   document.getElementById('btnDelete').style.display = 'block';
   document.getElementById('f-name').value     = b.name || '';
   setDistVal(b.distillery || '');
@@ -941,10 +1040,201 @@ function editFromDetail() {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
+    stopBarcodeScan();
     document.getElementById('formBackdrop').classList.remove('open');
     document.getElementById('detailBackdrop').classList.remove('open');
   }
 });
+
+// ── EXPORT / IMPORT ───────────────────────────────────────────────────────────
+function exportCabinet() {
+  const data = JSON.stringify(bottles, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const date = new Date().toISOString().slice(0,10);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `bourbon-cabinet-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importCabinet(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported)) throw new Error('Invalid format');
+      if (!confirm(`This will replace your current cabinet (${bottles.length} bottles) with ${imported.length} imported bottles. Continue?`)) return;
+      bottles = imported;
+      save();
+      render();
+    } catch(err) {
+      alert('Import failed — file does not appear to be a valid cabinet export.');
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ── SCAN STATUS HELPER ────────────────────────────────────────────────────────
+function setScanStatus(msg, cls='') {
+  const el = document.getElementById('scanStatus');
+  el.textContent = msg;
+  el.className = 'scan-status' + (cls ? ' '+cls : '');
+}
+
+// ── FILL FORM FROM DETECTED DATA ─────────────────────────────────────────────
+function fillFormFromData(data) {
+  // data: { name, distillery, age, proof, mashbill }
+  if (data.name)       document.getElementById('f-name').value     = data.name;
+  if (data.mashbill)   document.getElementById('f-mashbill').value  = data.mashbill;
+  if (data.age)        document.getElementById('f-age').value       = data.age;
+  if (data.proof)      document.getElementById('f-proof').value     = data.proof;
+  if (data.distillery) setDistVal(data.distillery);
+}
+
+// ── BARCODE SCANNING ──────────────────────────────────────────────────────────
+let barcodeStream = null;
+let barcodeInterval = null;
+
+async function startBarcodeScan() {
+  // Use BarcodeDetector if available, otherwise fall back to photo
+  if (!('BarcodeDetector' in window)) {
+    setScanStatus('Barcode scanner not supported — use Photo Label instead', 'error');
+    return;
+  }
+  try {
+    barcodeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const video = document.getElementById('scanVideo');
+    video.srcObject = barcodeStream;
+    document.getElementById('scanOverlay').classList.add('open');
+    setScanStatus('Scanning…', 'active');
+
+    const detector = new BarcodeDetector({ formats: ['upc_a','upc_e','ean_13','ean_8','code_128','code_39'] });
+    barcodeInterval = setInterval(async () => {
+      try {
+        const codes = await detector.detect(video);
+        if (codes.length > 0) {
+          const barcode = codes[0].rawValue;
+          stopBarcodeScan();
+          setScanStatus('Barcode found — looking up bottle…', 'active');
+          await lookupBarcode(barcode);
+        }
+      } catch(e) {}
+    }, 400);
+  } catch(e) {
+    setScanStatus('Camera access denied — use Photo Label instead', 'error');
+  }
+}
+
+function stopBarcodeScan() {
+  clearInterval(barcodeInterval);
+  if (barcodeStream) { barcodeStream.getTracks().forEach(t => t.stop()); barcodeStream = null; }
+  document.getElementById('scanOverlay').classList.remove('open');
+}
+
+async function lookupBarcode(barcode) {
+  try {
+    // Open Food Facts / Open Beauty Facts have spirits data; UPC lookup as fallback
+    const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+    const json = await res.json();
+    if (json.status === 1 && json.product) {
+      const p = json.product;
+      const name = p.product_name || p.product_name_en || '';
+      if (name) {
+        fillFormFromData({ name });
+        setScanStatus(`Found: ${name} — filling remaining fields…`, 'active');
+        // Let Claude fill in the rest from the name
+        await fillDetailsFromName(name);
+        return;
+      }
+    }
+    // Barcode found but not in database — ask Claude
+    setScanStatus('Not in database — using AI to identify…', 'active');
+    await fillDetailsFromName(barcode);
+  } catch(e) {
+    setScanStatus('Lookup failed — try Photo Label', 'error');
+  }
+}
+
+// ── PHOTO LABEL ───────────────────────────────────────────────────────────────
+function triggerPhoto() {
+  document.getElementById('photoInput').click();
+}
+
+async function handlePhoto(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  setScanStatus('Reading label…', 'active');
+
+  // Convert to base64
+  const base64 = await new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: file.type || 'image/jpeg', data: base64 } },
+            { type: 'text', text: 'This is a photo of a bourbon/whiskey bottle label. Extract the following and respond ONLY with a JSON object, no markdown, no extra text: {"name":"full bottle name","distillery":"distillery name","age":"age statement or NAS","proof":"numeric proof only","mashbill":"mashbill type if visible or empty string"}' }
+          ]
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const text = data?.content?.[0]?.text?.trim();
+    if (!text) throw new Error('No response');
+
+    const parsed = JSON.parse(text.replace(/```json|```/g,'').trim());
+    fillFormFromData(parsed);
+    setScanStatus(`Label read — fields filled in`, 'success');
+
+    // Reset file input so same photo can be used again if needed
+    event.target.value = '';
+  } catch(e) {
+    setScanStatus('Could not read label — try again or fill manually', 'error');
+    event.target.value = '';
+  }
+}
+
+// ── FILL DETAILS FROM NAME (for barcode hits) ─────────────────────────────────
+async function fillDetailsFromName(name) {
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 200,
+        messages: [{
+          role: 'user',
+          content: `For the bourbon/whiskey "${name}", respond ONLY with a JSON object, no markdown: {"name":"full proper name","distillery":"distillery name","age":"age statement or NAS","proof":"numeric proof only","mashbill":"mashbill type or empty string"}`
+        }]
+      })
+    });
+    const data = await response.json();
+    const text = data?.content?.[0]?.text?.trim();
+    const parsed = JSON.parse(text.replace(/```json|```/g,'').trim());
+    fillFormFromData(parsed);
+    setScanStatus('Fields filled — review and save', 'success');
+  } catch(e) {
+    setScanStatus('Could not identify bottle — fill in manually', 'error');
+  }
+}
 
 // ── SEED DATA ─────────────────────────────────────────────────────────────────
 // No seed data — cabinet starts empty
