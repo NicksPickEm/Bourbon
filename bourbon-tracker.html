@@ -74,6 +74,7 @@
     transition: all 0.15s; white-space: nowrap; align-self: center; margin-left: 8px; margin-bottom: 3px;
   }
   .btn-io:hover { border-color: var(--amber); color: var(--amber); }
+  .btn-io-row { display: none; }
 
   /* ── STATS ── */
   .stats-bar { display: flex; border-bottom: 1px solid var(--border); overflow-x: auto; }
@@ -297,15 +298,34 @@
   ::-webkit-scrollbar-track { background:var(--bg); }
   ::-webkit-scrollbar-thumb { background:var(--border); }
 
-  @media (max-width:600px) {
-    header { padding:24px 20px 0; }
-    .toolbar { padding:12px 20px; }
+  @media (max-width:640px) {
+    header { padding:18px 16px 0; flex-direction:column; align-items:stretch; gap:0; }
+    .header-left h1 { font-size:1.8rem; }
+    .header-left p  { margin-bottom:10px; font-size:10px; }
+    .header-right   { flex-direction:column; width:100%; gap:0; }
+    .tab-nav        { width:100%; border-top:1px solid var(--border); }
+    .tab-btn        { flex:1; padding:10px 4px 8px; font-size:10px; text-align:center; }
+    .btn-add        { width:100%; margin:0; padding:12px; text-align:center; border-top:1px solid var(--border); border-radius:0; }
+    .btn-io         { flex:1; margin:0; padding:10px 8px; font-size:10px; text-align:center; border-top:1px solid var(--border); border-left:1px solid var(--border); }
+    .btn-io-row      { display:flex; width:100%; }
+    .stat           { padding:10px 14px; }
+    .stat-val       { font-size:1.2rem; }
+    .stat-label     { font-size:9px; }
+    .toolbar        { padding:10px 16px; gap:6px; }
+    .filter-btn     { padding:4px 10px; font-size:10px; }
     .grid,.finished-cards { grid-template-columns:1fr; }
-    .stat { padding:12px 16px; }
-    .form-row { grid-template-columns:1fr; }
-    .detail-grid { grid-template-columns:1fr; }
-    .group-header { padding:14px 20px 10px; }
+    .form-row       { grid-template-columns:1fr; }
+    .modal-body     { padding:16px 16px; gap:12px; }
+    .modal-header   { padding:16px 16px 12px; }
+    .modal-footer   { padding:12px 16px 20px; }
+    .detail-grid    { grid-template-columns:1fr 1fr; }
+    .group-header   { padding:14px 16px 10px; }
+    .group-name     { font-size:1rem; }
     .finished-stat-row { grid-template-columns:1fr 1fr; }
+    .card-body      { min-height:130px; }
+    .label-name     { font-size:0.95rem; }
+    .bottle-panel   { width:76px; }
+    .bottle-svg     { width:36px; }
   }
 </style>
 </head>
@@ -321,9 +341,11 @@
       <button class="tab-btn active" id="tabCabinet" onclick="switchTab('cabinet')">Cabinet</button>
       <button class="tab-btn tab-finished" id="tabFinished" onclick="switchTab('finished')">Finished</button>
     </div>
-    <button class="btn-io" onclick="exportCabinet()" title="Export">↓ Export</button>
-    <button class="btn-io" onclick="document.getElementById('importInput').click()" title="Import">↑ Import</button>
-    <button class="btn-add" onclick="openAddModal()">+ Add Bottle</button>
+    <button class="btn-add" id="btnAdd" onclick="openAddModal()">+ Add Bottle</button>
+    <div class="btn-io-row">
+      <button class="btn-io" onclick="exportCabinet()" title="Export">↓ Export</button>
+      <button class="btn-io" onclick="document.getElementById('importInput').click()" title="Import">↑ Import</button>
+    </div>
   </div>
 </header>
 <input type="file" id="importInput" accept=".json" style="display:none" onchange="importCabinet(event)">
