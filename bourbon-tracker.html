@@ -245,73 +245,6 @@
   .risk-detail.moderate .drink-by-big { color: var(--risk-mod); }
   .risk-detail.high     .drink-by-big { color: var(--risk-high); }
 
-  /* ── SCAN BUTTONS ── */
-  .scan-row {
-    display: flex; gap: 8px; margin-bottom: 4px;
-  }
-  .btn-scan {
-    flex: 1; background: var(--surface2); border: 1px solid var(--border);
-    color: var(--amber); padding: 10px 12px; font-family: var(--font-mono);
-    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
-    cursor: pointer; transition: all 0.15s; display: flex; align-items: center;
-    justify-content: center; gap: 7px;
-  }
-  .btn-scan:hover { border-color: var(--amber); background: rgba(200,131,42,0.08); }
-  .btn-scan svg { width: 16px; height: 16px; flex-shrink: 0; }
-
-  .scan-status {
-    font-size: 11px; color: var(--muted); padding: 6px 0 2px;
-    min-height: 20px; text-align: center; letter-spacing: 0.04em;
-  }
-  .scan-status.active { color: var(--amber-lt); }
-  .scan-status.success { color: var(--full); }
-  .scan-status.error   { color: var(--danger); }
-
-  /* ── AUTOCOMPLETE ── */
-  .autocomplete-wrap { position: relative; }
-  .autocomplete-list {
-    position: absolute; top: 100%; left: 0; right: 0;
-    background: var(--surface2); border: 1px solid var(--amber);
-    border-top: none; z-index: 500; max-height: 220px; overflow-y: auto;
-    display: none;
-  }
-  .autocomplete-list.open { display: block; }
-  .autocomplete-item {
-    padding: 9px 12px; cursor: pointer; border-bottom: 1px solid var(--border);
-    font-size: 12px; color: var(--cream);
-  }
-  .autocomplete-item:last-child { border-bottom: none; }
-  .autocomplete-item:hover, .autocomplete-item.selected { background: rgba(200,131,42,0.15); }
-  .autocomplete-item .ac-name { font-family: var(--font-display); font-size: 13px; }
-  .autocomplete-item .ac-meta { font-size: 10px; color: var(--muted); margin-top: 2px; letter-spacing: 0.04em; }
-
-  /* Barcode scanner overlay */
-  #scanOverlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.92); z-index: 200;
-    flex-direction: column; align-items: center; justify-content: center; gap: 20px;
-  }
-  #scanOverlay.open { display: flex; }
-  #scanVideo { width: min(380px, 90vw); border: 2px solid var(--amber); }
-  .scan-frame {
-    position: relative; width: min(380px, 90vw);
-  }
-  .scan-line {
-    position: absolute; left: 0; right: 0; top: 50%;
-    height: 2px; background: var(--amber); opacity: 0.7;
-    animation: scanPulse 1.5s ease-in-out infinite;
-  }
-  @keyframes scanPulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
-  .scan-overlay-msg { color: var(--cream); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; }
-  .btn-scan-cancel {
-    background: none; border: 1px solid var(--muted); color: var(--muted);
-    padding: 8px 24px; font-family: var(--font-mono); font-size: 11px;
-    letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
-  }
-
-  /* Hidden file input for photo */
-  #photoInput { display: none; }
-
   ::-webkit-scrollbar { width:6px; height:6px; }
   ::-webkit-scrollbar-track { background:var(--bg); }
   ::-webkit-scrollbar-thumb { background:var(--border); }
@@ -396,29 +329,6 @@
       <button class="modal-close" onclick="closeFormModal()">✕</button>
     </div>
     <div class="modal-body">
-
-      <!-- SCAN ROW -->
-      <div id="scanSection">
-        <div class="scan-row">
-          <button class="btn-scan" onclick="startBarcodeScan()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 9V5a2 2 0 012-2h4M3 15v4a2 2 0 002 2h4M21 9V5a2 2 0 00-2-2h-4M21 15v4a2 2 0 01-2 2h-4"/>
-              <line x1="7" y1="12" x2="7" y2="12.01"/><line x1="12" y1="12" x2="12" y2="12.01"/><line x1="17" y1="12" x2="17" y2="12.01"/>
-              <line x1="7" y1="8" x2="7" y2="16"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="17" y1="8" x2="17" y2="16"/>
-            </svg>
-            Scan Barcode
-          </button>
-          <button class="btn-scan" onclick="triggerPhoto()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-              <circle cx="12" cy="13" r="4"/>
-            </svg>
-            Photo Label
-          </button>
-        </div>
-        <div class="scan-status" id="scanStatus">Scan barcode or photograph the label to auto-fill</div>
-      </div>
-
       <div class="form-row">
         <div class="field">
           <label>Bottle Name *</label>
@@ -526,20 +436,6 @@
     </div>
   </div>
 </div>
-
-<!-- HIDDEN PHOTO INPUT -->
-<input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handlePhoto(event)">
-
-<!-- BARCODE SCANNER OVERLAY -->
-<div id="scanOverlay">
-  <div class="scan-frame">
-    <video id="scanVideo" autoplay playsinline muted></video>
-    <div class="scan-line"></div>
-  </div>
-  <div class="scan-overlay-msg">Point camera at barcode</div>
-  <button class="btn-scan-cancel" onclick="stopBarcodeScan()">Cancel</button>
-</div>
-
 <!-- DETAIL MODAL -->
 <div class="backdrop" id="detailBackdrop" onclick="closeDetailModal(event)">
   <div class="modal">
@@ -884,8 +780,6 @@ function openAddModal() {
   editingId = null;
   document.getElementById('formTitle').innerHTML = 'Add a <span>New Bottle</span>';
   document.getElementById('btnDelete').style.display = 'none';
-  document.getElementById('scanSection').style.display = '';
-  setScanStatus('Scan barcode or photograph the label to auto-fill');
   clearForm();
   document.getElementById('formBackdrop').classList.add('open');
 }
@@ -894,7 +788,6 @@ function openEditModal(id) {
   editingId = id;
   const b = bottles.find(x => x.id === id); if (!b) return;
   document.getElementById('formTitle').innerHTML = `Edit <span>${esc(b.name)}</span>`;
-  document.getElementById('scanSection').style.display = 'none';
   document.getElementById('btnDelete').style.display = 'block';
   document.getElementById('f-name').value     = b.name || '';
   setDistVal(b.distillery || '');
@@ -1088,7 +981,6 @@ function editFromDetail() {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    stopBarcodeScan();
     document.getElementById('formBackdrop').classList.remove('open');
     document.getElementById('detailBackdrop').classList.remove('open');
   }
@@ -1126,164 +1018,6 @@ function importCabinet(event) {
   };
   reader.readAsText(file);
 }
-
-// ── SCAN STATUS HELPER ────────────────────────────────────────────────────────
-function setScanStatus(msg, cls='') {
-  const el = document.getElementById('scanStatus');
-  el.textContent = msg;
-  el.className = 'scan-status' + (cls ? ' '+cls : '');
-}
-
-// ── FILL FORM FROM DETECTED DATA ─────────────────────────────────────────────
-function fillFormFromData(data) {
-  // data: { name, distillery, age, proof, mashbill }
-  if (data.name)       document.getElementById('f-name').value     = data.name;
-  if (data.mashbill)   document.getElementById('f-mashbill').value  = data.mashbill;
-  if (data.age)        document.getElementById('f-age').value       = data.age;
-  if (data.proof)      document.getElementById('f-proof').value     = data.proof;
-  if (data.distillery) setDistVal(data.distillery);
-}
-
-// ── BARCODE SCANNING (ZXing — works Safari iOS + Android Chrome) ──────────────
-let zxingControls = null;
-
-async function loadZXing() {
-  if (window.ZXingBrowser) return true;
-  return new Promise((resolve) => {
-    const s = document.createElement('script');
-    s.src = 'https://unpkg.com/@zxing/browser@latest';
-    s.onload = () => resolve(true);
-    s.onerror = () => resolve(false);
-    document.head.appendChild(s);
-  });
-}
-
-async function startBarcodeScan() {
-  setScanStatus('Loading scanner…', 'active');
-  const loaded = await loadZXing();
-  if (!loaded || !window.ZXingBrowser) {
-    setScanStatus('Scanner failed to load — try Photo Label', 'error');
-    return;
-  }
-  try {
-    const video = document.getElementById('scanVideo');
-    document.getElementById('scanOverlay').classList.add('open');
-    setScanStatus('Scanning — point at barcode', 'active');
-
-    const codeReader = new ZXingBrowser.BrowserMultiFormatReader();
-    const devices = await ZXingBrowser.BrowserCodeReader.listVideoInputDevices();
-    // Prefer back/rear camera on mobile
-    const deviceId = devices.find(d => /back|rear|environment/i.test(d.label))?.deviceId
-                  || devices[devices.length - 1]?.deviceId;
-
-    zxingControls = await codeReader.decodeFromVideoDevice(deviceId, video, async (result, err) => {
-      if (result) {
-        const barcode = result.getText();
-        stopBarcodeScan();
-        setScanStatus('Barcode found — looking up bottle…', 'active');
-        await lookupBarcode(barcode);
-      }
-    });
-  } catch(e) {
-    stopBarcodeScan();
-    setScanStatus('Camera access denied — use Photo Label instead', 'error');
-  }
-}
-
-function stopBarcodeScan() {
-  if (zxingControls) { try { zxingControls.stop(); } catch(e){} zxingControls = null; }
-  document.getElementById('scanOverlay').classList.remove('open');
-}
-
-async function lookupBarcode(barcode) {
-  // Try Open Food Facts first — free, no API key
-  try {
-    const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
-    const json = await res.json();
-    if (json.status === 1 && json.product) {
-      const p = json.product;
-      const name = p.product_name || p.product_name_en || '';
-      const brand = p.brands || '';
-      if (name) {
-        // Try to parse proof from quantity or misc fields
-        const proofMatch = (p.quantity||'').match(/(\d+(?:\.\d+)?)\s*(?:proof)/i);
-        const abvMatch   = (p.nutriments?.alcohol||'') || (p.quantity||'').match(/(\d+(?:\.\d+)?)\s*%/)?.[1];
-        const proof = proofMatch ? proofMatch[1] : (abvMatch ? Math.round(+abvMatch * 2).toString() : '');
-        fillFormFromData({ name, distillery: brand, proof });
-        setScanStatus(`Found: ${name} — review and fill remaining fields`, 'success');
-        return;
-      }
-    }
-  } catch(e) {}
-
-  // Try UPC Item DB (free, no key)
-  try {
-    const res2 = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcode}`);
-    const json2 = await res2.json();
-    if (json2.code === 'OK' && json2.items && json2.items.length > 0) {
-      const item = json2.items[0];
-      const name = item.title || '';
-      const brand = item.brand || '';
-      if (name) {
-        fillFormFromData({ name, distillery: brand });
-        setScanStatus(`Found: ${name} — review and fill remaining fields`, 'success');
-        return;
-      }
-    }
-  } catch(e) {}
-
-  // Nothing found
-  setScanStatus('Bottle not found in database — fill in manually', 'error');
-}
-
-// ── PHOTO LABEL (Claude API — works when logged into claude.ai) ───────────────
-function triggerPhoto() {
-  document.getElementById('photoInput').click();
-}
-
-async function handlePhoto(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  setScanStatus('Reading label…', 'active');
-
-  const base64 = await new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(r.result.split(',')[1]);
-    r.onerror = rej;
-    r.readAsDataURL(file);
-  });
-
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 300,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: file.type || 'image/jpeg', data: base64 } },
-            { type: 'text', text: 'This is a photo of a bourbon/whiskey bottle label. Extract the following and respond ONLY with a JSON object, no markdown, no extra text: {"name":"full bottle name","distillery":"distillery name","age":"age statement or NAS","proof":"numeric proof only","mashbill":"mashbill type if visible or empty string"}' }
-          ]
-        }]
-      })
-    });
-
-    const data = await response.json();
-    const text = data?.content?.[0]?.text?.trim();
-    if (!text) throw new Error('No response');
-
-    const parsed = JSON.parse(text.replace(/```json|```/g,'').trim());
-    fillFormFromData(parsed);
-    setScanStatus('Label read — fields filled in', 'success');
-    event.target.value = '';
-  } catch(e) {
-    setScanStatus('Photo label requires Claude login — use barcode or fill manually', 'error');
-    event.target.value = '';
-  }
-}
-
 // ── BOURBON CATALOGUE ─────────────────────────────────────────────────────────
 const BOURBON_CATALOGUE = [
   // BUFFALO TRACE DISTILLERY
