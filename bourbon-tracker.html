@@ -1137,30 +1137,47 @@ function stopBarcodeScan() {
 }
 
 async function lookupBarcode(barcode) {
+  // Try Open Food Facts first — free, no API key
   try {
-    // Open Food Facts / Open Beauty Facts have spirits data; UPC lookup as fallback
     const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
     const json = await res.json();
     if (json.status === 1 && json.product) {
       const p = json.product;
       const name = p.product_name || p.product_name_en || '';
+      const brand = p.brands || '';
       if (name) {
-        fillFormFromData({ name });
-        setScanStatus(`Found: ${name} — filling remaining fields…`, 'active');
-        // Let Claude fill in the rest from the name
-        await fillDetailsFromName(name);
+        // Try to parse proof from quantity or misc fields
+        const proofMatch = (p.quantity||'').match(/(\d+(?:\.\d+)?)\s*(?:proof)/i);
+        const abvMatch   = (p.nutriments?.alcohol||'') || (p.quantity||'').match(/(\d+(?:\.\d+)?)\s*%/)?.[1];
+        const proof = proofMatch ? proofMatch[1] : (abvMatch ? Math.round(+abvMatch * 2).toString() : '');
+        fillFormFromData({ name, distillery: brand, proof });
+        setScanStatus(`Found: ${name} — review and fill remaining fields`, 'success');
         return;
       }
     }
-    // Barcode found but not in database — ask Claude
-    setScanStatus('Not in database — using AI to identify…', 'active');
-    await fillDetailsFromName(barcode);
-  } catch(e) {
-    setScanStatus('Lookup failed — try Photo Label', 'error');
-  }
+  } catch(e) {}
+
+  // Try UPC Item DB (free, no key)
+  try {
+    const res2 = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcode}`);
+    const json2 = await res2.json();
+    if (json2.code === 'OK' && json2.items && json2.items.length > 0) {
+      const item = json2.items[0];
+      const name = item.title || '';
+      const brand = item.brand || '';
+      if (name) {
+        fillFormFromData({ name, distillery: brand });
+        setScanStatus(`Found: ${name} — review and fill remaining fields`, 'success');
+        return;
+      }
+    }
+  } catch(e) {}
+
+  // Nothing found
+  setScanStatus('Bottle not found in database — fill in manually', 'error');
 }
 
-// ── PHOTO LABEL ───────────────────────────────────────────────────────────────
+// ── PHOTO LABEL (Claude API — works when logged into claude.ai) ───────────────
 function triggerPhoto() {
   document.getElementById('photoInput').click();
 }
@@ -1170,7 +1187,6 @@ async function handlePhoto(event) {
   if (!file) return;
   setScanStatus('Reading label…', 'active');
 
-  // Convert to base64
   const base64 = await new Promise((res, rej) => {
     const r = new FileReader();
     r.onload = () => res(r.result.split(',')[1]);
@@ -1201,38 +1217,11 @@ async function handlePhoto(event) {
 
     const parsed = JSON.parse(text.replace(/```json|```/g,'').trim());
     fillFormFromData(parsed);
-    setScanStatus(`Label read — fields filled in`, 'success');
-
-    // Reset file input so same photo can be used again if needed
+    setScanStatus('Label read — fields filled in', 'success');
     event.target.value = '';
   } catch(e) {
-    setScanStatus('Could not read label — try again or fill manually', 'error');
+    setScanStatus('Photo label requires Claude login — use barcode or fill manually', 'error');
     event.target.value = '';
-  }
-}
-
-// ── FILL DETAILS FROM NAME (for barcode hits) ─────────────────────────────────
-async function fillDetailsFromName(name) {
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 200,
-        messages: [{
-          role: 'user',
-          content: `For the bourbon/whiskey "${name}", respond ONLY with a JSON object, no markdown: {"name":"full proper name","distillery":"distillery name","age":"age statement or NAS","proof":"numeric proof only","mashbill":"mashbill type or empty string"}`
-        }]
-      })
-    });
-    const data = await response.json();
-    const text = data?.content?.[0]?.text?.trim();
-    const parsed = JSON.parse(text.replace(/```json|```/g,'').trim());
-    fillFormFromData(parsed);
-    setScanStatus('Fields filled — review and save', 'success');
-  } catch(e) {
-    setScanStatus('Could not identify bottle — fill in manually', 'error');
   }
 }
 
