@@ -1210,7 +1210,8 @@ function onNameInput(val) {
   acSelectedIdx = -1;
   list.innerHTML = matches.map((b, i) =>
     `<div class="autocomplete-item" data-idx="${i}"
-       onmousedown="selectCatalogueItem(${i})"
+       onmousedown="event.preventDefault();selectCatalogueItem(${i})"
+       ontouchend="event.preventDefault();selectCatalogueItem(${i})"
        onmouseover="acHover(${i})">
       <div class="ac-name">${esc(b.name)}</div>
       <div class="ac-meta">${esc(b.distillery)} · ${b.proof}° · ${esc(b.age)}</div>
